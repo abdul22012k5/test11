@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Bus Occupancy Dashboard</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: linear-gradient(to right, #1e3c72, #2a5298);
+      color: white;
+      text-align: center;
+      margin-top: 50px;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.1);
+      padding: 30px;
+      border-radius: 15px;
+      width: 350px;
+      margin: auto;
+      box-shadow: 0 0 25px rgba(0,0,0,0.4);
+    }
+
+    .value {
+      font-size: 40px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    .status {
+      font-size: 22px;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    /* LED Indicator Section */
+    .indicator {
+      margin-top: 25px;
+      text-align: left;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0;
+      font-size: 18px;
+    }
+
+    .dot {
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      background: #555;
+      transition: 0.3s ease;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🚌 Smart Bus Monitoring</h1>
+
+<div class="card">
+  <p>Passenger Count</p>
+  <div class="value" id="count">0</div>
+
+  <p>Occupancy (%)</p>
+  <div class="value" id="occupancy">0%</div>
+
+  <div class="status" id="status">No Data</div>
+
+  <!-- LED Indicators -->
+  <div class="indicator">
+    <div class="row">
+      <span>Seats Available</span>
+      <div class="dot" id="available"></div>
+    </div>
+
+    <div class="row">
+      <span>Moderate</span>
+      <div class="dot" id="moderate"></div>
+    </div>
+
+    <div class="row">
+      <span>Overload</span>
+      <div class="dot" id="overload"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDroxiF7psdPZwd3rL1gA9ShQ5YdUnc8aE",
+  databaseURL: "https://bus-occupancy-monitoring-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
+
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const busRef = ref(database, 'bus');
+
+onValue(busRef, (snapshot) => {
+  const data = snapshot.val();
+
+  if (data) {
+    document.getElementById("count").innerText = data.passengerCount;
+    document.getElementById("occupancy").innerText = data.occupancy + "%";
+    document.getElementById("status").innerText = data.status;
+
+    updateLED(data.occupancy);
+  }
+});
+
+function updateLED(occupancy) {
+
+  // Reset all LEDs
+  document.getElementById("available").style.background = "#555";
+  document.getElementById("moderate").style.background = "#555";
+  document.getElementById("overload").style.background = "#555";
+
+  if (occupancy < 50) {
+    document.getElementById("available").style.background = "lime";
+  } 
+  else if (occupancy < 80) {
+    document.getElementById("moderate").style.background = "orange";
+  } 
+  else {
+    document.getElementById("overload").style.background = "red";
+  }
+}
+
+</script>
+
+</body>
+</html>
