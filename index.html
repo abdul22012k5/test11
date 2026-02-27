@@ -3,7 +3,7 @@
 <head>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Automated Sewage Gas Monitoring with Safe Distance Estimation</title>
+<title>Automated Sewage Gas Monitoring with Safe Distance Estination</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -91,18 +91,17 @@ box-shadow:0 0 15px rgba(0,0,0,0.6);
 .green{color:#2ecc71;}
 .yellow{color:#f1c40f;}
 .orange{color:#e67e22;}
-.red{color:#e74c3c;}
+.red{
+color:#e74c3c;
+font-weight:bold;
+animation:blink 1s infinite;
+}
 
 #map{
 width:90%;
 height:400px;
 margin:30px auto;
 border-radius:15px;
-}
-
-.location-box{
-margin-top:15px;
-font-size:18px;
 }
 
 @media(max-width:768px){
@@ -144,6 +143,12 @@ align-items:center;
     <div id="dangerStatus">Analyzing...</div>
   </div>
 
+  <!-- NEW LIDAR PANEL -->
+  <div class="analysis-card">
+    <h3>LiDAR Proximity Monitoring</h3>
+    <div id="lidarStatus">Analyzing...</div>
+  </div>
+
 </div>
 
 </div>
@@ -161,7 +166,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Leaflet Map
+// Map
 let map = L.map('map').setView([17.385044,78.486671],15);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
@@ -180,6 +185,7 @@ document.getElementById("mq7").innerHTML="MQ7 (CO)<br>"+d.MQ7.toFixed(2)+" PPM";
 document.getElementById("mq2").innerHTML="MQ2 (Methane, LPG)<br>"+d.MQ2.toFixed(2)+" PPM";
 document.getElementById("mq3").innerHTML="MQ3 (Ammonia)<br>"+d.MQ3.toFixed(2)+" PPM";
 
+// STATUS
 let s=document.getElementById("status");
 s.innerHTML=d.STATUS;
 s.className="status";
@@ -209,7 +215,7 @@ spreadClass="red";
 document.getElementById("spreadStatus").innerHTML=
 "<span class='"+spreadClass+"'>"+spreadText+"</span>";
 
-// -------- Danger Prediction Logic --------
+// -------- Danger Prediction --------
 let timeDanger = d.TimeToDanger_sec || 0;
 let dangerText="";
 let dangerClass="green";
@@ -238,7 +244,34 @@ dangerClass="green";
 document.getElementById("dangerStatus").innerHTML=
 "<span class='"+dangerClass+"'>"+dangerText+"</span>";
 
-// Update Map
+// -------- LIDAR DISPLAY --------
+let lidarDist = d.Lidar_Distance_cm || 0;
+let lidarState = d.Lidar_Status || "UNKNOWN";
+
+let lidarText="";
+let lidarClass="green";
+
+if(lidarState==="PERSON NEAR"){
+lidarText="CRITICAL – HUMAN DETECTED ("+lidarDist+" cm)";
+lidarClass="red";
+}
+else if(lidarState==="OBJECT DETECTED"){
+lidarText="WARNING – OBJECT IN PROXIMITY ("+lidarDist+" cm)";
+lidarClass="orange";
+}
+else if(lidarState==="CLEAR AREA"){
+lidarText="AREA CLEAR ("+lidarDist+" cm)";
+lidarClass="green";
+}
+else{
+lidarText="OUT OF RANGE";
+lidarClass="yellow";
+}
+
+document.getElementById("lidarStatus").innerHTML=
+"<span class='"+lidarClass+"'>"+lidarText+"</span>";
+
+// Map Update
 let newLat=parseFloat(d.Latitude);
 let newLng=parseFloat(d.Longitude);
 marker.setLatLng([newLat,newLng]);
