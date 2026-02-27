@@ -146,11 +146,6 @@ align-items:center;
 
 </div>
 
-<div class="location-box">
-  <div id="lat"></div>
-  <div id="lon"></div>
-</div>
-
 </div>
 
 <div id="map"></div>
@@ -184,9 +179,6 @@ if(!d) return;
 document.getElementById("mq7").innerHTML="MQ7 (CO)<br>"+d.MQ7.toFixed(2)+" PPM";
 document.getElementById("mq2").innerHTML="MQ2 (Methane, LPG)<br>"+d.MQ2.toFixed(2)+" PPM";
 document.getElementById("mq3").innerHTML="MQ3 (Ammonia)<br>"+d.MQ3.toFixed(2)+" PPM";
-
-document.getElementById("lat").innerHTML="Latitude: "+d.Latitude;
-document.getElementById("lon").innerHTML="Longitude: "+d.Longitude;
 
 let s=document.getElementById("status");
 s.innerHTML=d.STATUS;
