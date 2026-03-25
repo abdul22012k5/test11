@@ -1,285 +1,138 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Automated Sewage Gas Monitoring with Safe Distance Estimation</title>
-
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<style>
-
-body{
-margin:0;
-font-family:Segoe UI;
-background:#0b1c24;
-color:white;
-text-align:center;
-}
-
-h1{
-padding:20px;
-margin:0;
-background:#122b36;
-}
-
-.section{
-padding:20px;
-}
-
-.container{
-display:flex;
-flex-wrap:wrap;
-justify-content:center;
-gap:20px;
-}
-
-.card{
-flex:1 1 250px;
-padding:25px;
-border-radius:12px;
-font-size:20px;
-font-weight:bold;
-background:#1c2f38;
-box-shadow:0 0 15px rgba(0,0,0,0.6);
-}
-
-.mq7{border-left:6px solid #ff5722;}
-.mq2{border-left:6px solid #2196f3;}
-.mq3{border-left:6px solid #9c27b0;}
-
-.status{
-display:inline-block;
-padding:12px 35px;
-border-radius:25px;
-font-size:22px;
-font-weight:bold;
-}
-
-.safe{background:#2ecc71;}
-.warning{background:#f39c12;}
-.danger{
-background:#e74c3c;
-animation:blink 1s infinite;
-}
-
-@keyframes blink{
-50%{opacity:0.4;}
-}
-
-.analysis-container{
-display:flex;
-flex-wrap:wrap;
-justify-content:center;
-gap:20px;
-padding-top:20px;
-}
-
-.analysis-card{
-flex:1 1 300px;
-background:#16262f;
-padding:25px;
-border-radius:12px;
-font-size:18px;
-box-shadow:0 0 15px rgba(0,0,0,0.6);
-}
-
-.green{color:#2ecc71;}
-.yellow{color:#f1c40f;}
-.orange{color:#e67e22;}
-.red{
-color:#e74c3c;
-font-weight:bold;
-animation:blink 1s infinite;
-}
-
-#map{
-width:90%;
-height:400px;
-margin:30px auto;
-border-radius:15px;
-}
-
-@media(max-width:768px){
-.container, .analysis-container{
-flex-direction:column;
-align-items:center;
-}
-}
-
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automated Sewage Gas Monitoring</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { background-color: #0b141d; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card-bg { background-color: #16212b; border-radius: 12px; transition: all 0.3s ease; }
+        .card-bg:hover { background-color: #1c2a36; }
+        #map { height: 450px; width: 100%; border-radius: 12px; margin-top: 24px; border: 1px solid #2d3e4f; }
+        .relay-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+    </style>
 </head>
+<body class="p-4 md:p-10">
 
-<body>
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-10 tracking-tight">Automated Sewage Gas Monitoring with Safe Distance Estimation</h1>
 
-<h1>Automated Sewage Gas Monitoring with Safe Distance Estimation</h1>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="card-bg p-8 border-l-4 border-orange-500 shadow-lg text-center">
+                <p class="text-sm font-semibold uppercase text-gray-400 mb-2">MQ7 (CO)</p>
+                <h2 id="mq7-val" class="text-4xl font-bold">0.0</h2>
+                <p class="text-xs text-gray-500 mt-2">PPM</p>
+            </div>
+            <div class="card-bg p-8 border-l-4 border-blue-500 shadow-lg text-center">
+                <p class="text-sm font-semibold uppercase text-gray-400 mb-2">MQ2 (Methane, LPG)</p>
+                <h2 id="mq2-val" class="text-4xl font-bold">0.0</h2>
+                <p class="text-xs text-gray-500 mt-2">PPM</p>
+            </div>
+            <div class="card-bg p-8 border-l-4 border-purple-500 shadow-lg text-center">
+                <p class="text-sm font-semibold uppercase text-gray-400 mb-2">MQ3 (Ammonia)</p>
+                <h2 id="mq3-val" class="text-4xl font-bold">0.0</h2>
+                <p class="text-xs text-gray-500 mt-2">PPM</p>
+            </div>
+        </div>
 
-<div class="section">
+        <div class="card-bg p-6 mb-8 text-center shadow-lg">
+            <p class="text-sm font-semibold uppercase text-gray-400 mb-2">Status</p>
+            <h2 id="system-status" class="text-2xl font-bold text-blue-400 uppercase tracking-widest">Loading...</h2>
+            <div class="mt-2 text-xs text-gray-500">
+                <span id="sprinkler-dot" class="relay-indicator bg-gray-600"></span>
+                Sprinkler: <span id="sprinkler-status">OFF</span>
+            </div>
+        </div>
 
-<div class="container">
-  <div id="mq7" class="card mq7">MQ7 (CO)</div>
-  <div id="mq2" class="card mq2">MQ2 (Methane, LPG)</div>
-  <div id="mq3" class="card mq3">MQ3 (Ammonia)</div>
-</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="card-bg p-8 text-center shadow-lg">
+                <p class="text-sm font-semibold uppercase text-gray-400 mb-2">Gas Spread Analysis</p>
+                <h2 id="spread-val" class="text-xl font-bold text-gray-300">Analyzing...</h2>
+                <p class="text-[10px] text-gray-600 mt-1">m/min</p>
+            </div>
+            <div class="card-bg p-8 text-center shadow-lg">
+                <p class="text-sm font-semibold uppercase text-gray-400 mb-2">Danger Prediction</p>
+                <h2 id="reach-val" class="text-xl font-bold text-gray-300">Analyzing...</h2>
+                <p class="text-[10px] text-gray-600 mt-1">Seconds to Reach</p>
+            </div>
+            <div class="card-bg p-8 text-center shadow-lg">
+                <p class="text-sm font-semibold uppercase text-gray-400 mb-2">LiDAR Proximity Monitoring</p>
+                <h2 id="lidar-val" class="text-xl font-bold text-gray-300">Analyzing...</h2>
+                <p id="lidar-text" class="text-[10px] text-gray-600 mt-1">Distance (CM)</p>
+            </div>
+        </div>
 
-<br>
+        <div class="shadow-2xl">
+            <div id="map"></div>
+        </div>
+    </div>
 
-<h2>Status</h2>
-<div id="status" class="status">Loading...</div>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<div class="analysis-container">
+    <script>
+        // --- 1. CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD0b1B6tVaNCo-S1Tlf9Db79TQCBvjOrvM",
+            databaseURL: "https://gasmonitoring-b700b-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
 
-  <div class="analysis-card">
-    <h3>Gas Spread Analysis</h3>
-    <div id="spreadStatus">Analyzing...</div>
-  </div>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-  <div class="analysis-card">
-    <h3>Danger Prediction</h3>
-    <div id="dangerStatus">Analyzing...</div>
-  </div>
+        // Initialize Map (Chintapalle/Rajam region based on your code)
+        const map = L.map('map').setView([18.4639, 83.6600], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        let marker = L.marker([18.4639, 83.6600]).addTo(map);
 
-  <!-- NEW LIDAR PANEL -->
-  <div class="analysis-card">
-    <h3>LiDAR Proximity Monitoring</h3>
-    <div id="lidarStatus">Analyzing...</div>
-  </div>
+        // --- 2. DATA LISTENER ---
+        db.ref('/sewage_monitor/live').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                // Update Gas PPM
+                document.getElementById('mq7-val').innerText = (data.co_ppm || 0).toFixed(1);
+                document.getElementById('mq2-val').innerText = (data.ch4_ppm || 0).toFixed(1);
+                document.getElementById('mq3-val').innerText = (data.nh3_ppm || 0).toFixed(1);
 
-</div>
+                // Update Status & Colors
+                const statusEl = document.getElementById('system-status');
+                const statusText = data.status || "IDLE";
+                statusEl.innerText = statusText;
+                
+                if (statusText === "DANGER") statusEl.className = "text-2xl font-bold text-red-500 uppercase tracking-widest";
+                else if (statusText === "WARNING") statusEl.className = "text-2xl font-bold text-yellow-500 uppercase tracking-widest";
+                else statusEl.className = "text-2xl font-bold text-green-400 uppercase tracking-widest";
 
-</div>
+                // Update Analytics
+                document.getElementById('spread-val').innerText = (data.spread_speed_mpm || 0).toFixed(3);
+                document.getElementById('reach-val').innerText = data.time_to_reach_s > 0 ? data.time_to_reach_s.toFixed(1) : "---";
+                document.getElementById('lidar-val').innerText = data.lidar_cm || 0;
 
-<div id="map"></div>
+                // Update Sprinkler
+                const dot = document.getElementById('sprinkler-dot');
+                const text = document.getElementById('sprinkler-status');
+                if (data.relay_active) {
+                    dot.className = "relay-indicator bg-orange-500 shadow-[0_0_8px_#f97316]";
+                    text.innerText = "ACTIVE";
+                    text.className = "text-orange-500 font-bold";
+                } else {
+                    dot.className = "relay-indicator bg-gray-600";
+                    text.innerText = "OFF";
+                    text.className = "text-gray-500";
+                }
 
-<script>
-
-// Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyD0b1B6tVaNCo-S1Tlf9Db79TQCBvjOrvM",
-  databaseURL: "https://gasmonitoring-b700b-default-rtdb.asia-southeast1.firebasedatabase.app"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-// Map
-let map = L.map('map').setView([17.385044,78.486671],15);
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-maxZoom:19
-}).addTo(map);
-
-let marker = L.marker([17.385044,78.486671]).addTo(map);
-
-// Firebase Listener
-db.ref("ESP32").on("value",snap=>{
-
-let d = snap.val();
-if(!d) return;
-
-document.getElementById("mq7").innerHTML="MQ7 (CO)<br>"+d.MQ7.toFixed(2)+" PPM";
-document.getElementById("mq2").innerHTML="MQ2 (Methane, LPG)<br>"+d.MQ2.toFixed(2)+" PPM";
-document.getElementById("mq3").innerHTML="MQ3 (Ammonia)<br>"+d.MQ3.toFixed(2)+" PPM";
-
-// STATUS
-let s=document.getElementById("status");
-s.innerHTML=d.STATUS;
-s.className="status";
-
-if(d.STATUS=="SAFE") s.classList.add("safe");
-else if(d.STATUS=="WARNING") s.classList.add("warning");
-else s.classList.add("danger");
-
-// -------- Spread Logic --------
-let spread = d.SpreadRate_PPM_per_sec || 0;
-let spreadText="";
-let spreadClass="green";
-
-if(spread <= 2){
-spreadText="STABLE ENVIRONMENT ("+spread.toFixed(2)+" PPM/sec)";
-spreadClass="green";
-}
-else if(spread <= 8){
-spreadText="MODERATE RISE ("+spread.toFixed(2)+" PPM/sec)";
-spreadClass="yellow";
-}
-else{
-spreadText="RAPID GAS SPREAD ("+spread.toFixed(2)+" PPM/sec)";
-spreadClass="red";
-}
-
-document.getElementById("spreadStatus").innerHTML=
-"<span class='"+spreadClass+"'>"+spreadText+"</span>";
-
-// -------- Danger Prediction --------
-let timeDanger = d.TimeToDanger_sec || 0;
-let dangerText="";
-let dangerClass="green";
-
-if(timeDanger == 0 && d.STATUS=="SAFE"){
-dangerText="NO IMMEDIATE RISK";
-dangerClass="green";
-}
-else if(timeDanger > 60){
-dangerText="APPROACHING RISK ("+Math.round(timeDanger)+" sec)";
-dangerClass="yellow";
-}
-else if(timeDanger > 20){
-dangerText="HIGH RISK ("+Math.round(timeDanger)+" sec)";
-dangerClass="orange";
-}
-else if(timeDanger > 0){
-dangerText="CRITICAL – EVACUATE ("+Math.round(timeDanger)+" sec)";
-dangerClass="red";
-}
-else{
-dangerText="STABLE";
-dangerClass="green";
-}
-
-document.getElementById("dangerStatus").innerHTML=
-"<span class='"+dangerClass+"'>"+dangerText+"</span>";
-
-// -------- LIDAR DISPLAY --------
-let lidarDist = d.Lidar_Distance_cm || 0;
-let lidarState = d.Lidar_Status || "UNKNOWN";
-
-let lidarText="";
-let lidarClass="green";
-
-if(lidarState==="PERSON NEAR"){
-lidarText="CRITICAL – HUMAN DETECTED ("+lidarDist+" cm)";
-lidarClass="red";
-}
-else if(lidarState==="OBJECT DETECTED"){
-lidarText="WARNING – OBJECT IN PROXIMITY ("+lidarDist+" cm)";
-lidarClass="orange";
-}
-else if(lidarState==="CLEAR AREA"){
-lidarText="AREA CLEAR ("+lidarDist+" cm)";
-lidarClass="green";
-}
-else{
-lidarText="OUT OF RANGE";
-lidarClass="yellow";
-}
-
-document.getElementById("lidarStatus").innerHTML=
-"<span class='"+lidarClass+"'>"+lidarText+"</span>";
-
-// Map Update
-let newLat=parseFloat(d.Latitude);
-let newLng=parseFloat(d.Longitude);
-marker.setLatLng([newLat,newLng]);
-map.setView([newLat,newLng],15);
-
-});
-
-</script>
-
+                // Update Location
+                if (data.latitude && data.longitude) {
+                    const pos = [data.latitude, data.longitude];
+                    marker.setLatLng(pos);
+                    if (data.gps_valid) map.panTo(pos);
+                }
+            }
+        });
+    </script>
 </body>
 </html>
